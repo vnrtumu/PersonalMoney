@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ImageBackground,
   StatusBar,
+  Alert,
 } from 'react-native';
 import COLORS from '../constants/colors';
 import Diamond from '../assets/icons/diamond.svg';
@@ -16,6 +17,10 @@ import Users from '../assets/icons/users.svg';
 import Message from '../assets/icons/mail.svg';
 import Security from '../assets/icons/security.svg';
 import Data from '../assets/icons/data.svg';
+import Storage from '../utils/Storage';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import supabase from '../utils/supabase';
+import { useNavigation } from '@react-navigation/native';
 
 // Mock data for profile items - replace icons with actual paths
 const profileItems = [
@@ -29,9 +34,41 @@ const profileItems = [
     text: 'Mastrer Data',
     navigateTo: 'MasterData',
   },
+  { icon: <Data width={16} height={16} />, text: 'Logout' },
 ];
 
-const ProfileScreen = ({ navigation }) => {
+const ProfileScreen = ({}) => {
+  const [user, setUser] = useState(null);
+  const navigation = useNavigation();
+
+  const handleSignOut = async () => {
+    console.log('hi i am logging out..........');
+
+    try {
+      // 1. Clear local data first to prevent automatic re-login
+      await Storage.clearData('user');
+
+      // 2. Sign out from external services
+      await GoogleSignin.signOut();
+      await supabase.auth.signOut();
+
+      // 3. Navigate to the Onboarding/Login screen
+      Alert.alert('Signed Out', 'You have been signed out successfully.');
+      navigation.replace('Onboarding'); // Go back to the very first screen
+    } catch (error) {
+      console.error('Sign Out Error:', error);
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userData = await Storage.getData('user');
+      setUser(userData);
+    };
+
+    fetchUser();
+  }, []);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -56,37 +93,63 @@ const ProfileScreen = ({ navigation }) => {
 
         <View style={styles.profileInfoContainer}>
           <Image
-            source={require('../assets/images/user5.png')} // Placeholder avatar
+            source={{
+              uri: user?.user_metadata?.picture || 'https://i.pravatar.cc/150',
+            }}
             style={styles.avatar}
           />
-          <Text style={styles.profileName}>Enjelin Morgeana</Text>
-          <Text style={styles.profileHandle}>@enjelin_morgeana</Text>
+          <Text style={styles.profileName}>
+            {user?.user_metadata?.full_name || 'Guest'}
+          </Text>
+          <Text style={styles.profileHandle}>{user?.email || 'No email'}</Text>
         </View>
 
         <View style={styles.menuContainer}>
-          {profileItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.menuItem}
-              onPress={() =>
-                item.navigateTo && navigation.navigate(item.navigateTo)
-              }
-            >
-              <View
-                style={[
-                  styles.menuIconContainer,
-                  {
-                    backgroundColor:
-                      index === 0 ? COLORS.lightGreen : 'transparent',
-                  },
-                ]}
+          {profileItems.map((item, index) =>
+            item.text == 'Logout' ? (
+              <TouchableOpacity
+                key={index}
+                style={styles.menuItem}
+                onPress={handleSignOut}
               >
-                {item.icon}
-              </View>
-              <Text style={styles.menuText}>{item.text}</Text>
-              <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
-          ))}
+                <View
+                  style={[
+                    styles.menuIconContainer,
+                    {
+                      backgroundColor:
+                        index === 0 ? COLORS.lightGreen : 'transparent',
+                    },
+                  ]}
+                >
+                  {item.icon}
+                </View>
+                <Text style={styles.menuText}>{item.text}</Text>
+                <Text style={styles.menuArrow}>›</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                key={index}
+                style={styles.menuItem}
+                onPress={() =>
+                  item.navigateTo && navigation.navigate(item.navigateTo)
+                }
+              >
+                <View
+                  style={[
+                    styles.menuIconContainer,
+                    {
+                      backgroundColor:
+                        index === 0 ? COLORS.lightGreen : 'transparent',
+                    },
+                  ]}
+                >
+                  {item.icon}
+                </View>
+                <Text style={styles.menuText}>{item.text}</Text>
+                <Text style={styles.menuArrow}>›</Text>
+              </TouchableOpacity>
+            ),
+          )}
         </View>
       </ScrollView>
     </View>

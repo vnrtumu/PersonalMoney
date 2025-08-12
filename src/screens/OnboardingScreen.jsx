@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import COLORS from '../constants/colors';
@@ -7,7 +7,98 @@ import Man from '../assets/Man.svg'; // Person illustration SVG
 import Coint from '../assets/Coint.svg';
 import Donut from '../assets/Donut.svg';
 
+import {
+  GoogleSignin,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
+import supabase from '../utils/supabase';
+import { useNavigation } from '@react-navigation/native';
+import Storage from '../utils/Storage';
+
 export default function OnboardingScreen({ navigation }) {
+  const [loading, setLoading] = useState(true); // Loading state
+
+  useEffect(() => {
+    GoogleSignin.configure({
+      scopes: ['https://www.googleapis.com/auth/drive.readonly'],
+      webClientId:
+        '978040523635-cgqm8bi593ta2jmrsda17mcnr0loqdv1.apps.googleusercontent.com',
+    });
+
+    // Check if user is already signed in
+    checkUserSignedIn();
+  }, []);
+
+  const checkUserSignedIn = async () => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      console.log('data---->', data);
+
+      if (error) throw error;
+
+      if (data.session?.user) {
+        const user = data.session.user;
+        console.log('User session found:', user);
+        await Storage.setData('user', user);
+
+        navigation.replace('Main', {
+          screen: 'Home',
+          params: { user },
+        });
+      } else {
+        console.log('No active session found.');
+      }
+    } catch (error) {
+      console.error('Error checking for active session:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      console.log('Google Sign-In Success:', userInfo);
+
+      if (userInfo.data.idToken) {
+        const { data, error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: userInfo.data.idToken,
+        });
+
+        console.log('Supabase Auth Response:', { data, error });
+
+        if (error) {
+          Alert.alert('Error', error.message);
+        } else {
+          console.log('Signed in with Google successfully');
+          await Storage.setData('user', data.user);
+          navigation.replace('Main', {
+            screen: 'Home',
+            params: { user: data.user },
+          });
+        }
+      } else {
+        throw new Error('No ID token present!');
+      }
+    } catch (error) {
+      console.error('Google Sign-In Error:', error);
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        Alert.alert('Sign In Cancelled', 'User cancelled the login flow.');
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        Alert.alert('Sign In In Progress', 'Sign in is already in progress.');
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(
+          'Play Services Error',
+          'Google Play services not available or outdated.',
+        );
+      } else {
+        Alert.alert('Error', error.message);
+      }
+    }
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.artContainer}>
@@ -27,7 +118,7 @@ export default function OnboardingScreen({ navigation }) {
         >
           <TouchableOpacity
             style={styles.buttonTouchable}
-            onPress={() => navigation.navigate('Main')}
+            onPress={handleGoogleSignIn}
           >
             <Text style={styles.buttonText}>Get Started</Text>
           </TouchableOpacity>

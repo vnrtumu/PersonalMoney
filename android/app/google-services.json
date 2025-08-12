@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "420613556099",
+    "project_id": "personalmoney-57e84",
+    "storage_bucket": "personalmoney-57e84.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:420613556099:android:9faaeb668bab101cb318b6",
+        "android_client_info": {
+          "package_name": "com.personalmoney"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC8Fb6QQIvsmAqzu2LlyMWV7WD1R_LIBrk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

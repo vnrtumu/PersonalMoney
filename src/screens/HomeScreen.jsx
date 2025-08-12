@@ -15,8 +15,10 @@ import SendAgain from '../components/home/SendAgain';
 import { useNavigation } from '@react-navigation/native';
 import PlusIcon from '../assets/icons/Plus.svg';
 
-const HomeScreen = () => {
+const HomeScreen = ({ route }) => {
   const navigation = useNavigation();
+  const user = route.params?.user;
+  console.log('route---->', route);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -29,7 +31,7 @@ const HomeScreen = () => {
           <View style={styles.header}>
             <View>
               <Text style={styles.greeting}>Good afternoon,</Text>
-              <Text style={styles.userName}>Enjelin Morgeana</Text>
+              <Text style={styles.userName}>{user ? user.name : 'Guest'}</Text>
             </View>
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
