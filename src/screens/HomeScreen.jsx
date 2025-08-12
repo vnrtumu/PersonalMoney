@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,22 @@ import TransactionList from '../components/home/TransactionList';
 import SendAgain from '../components/home/SendAgain';
 import { useNavigation } from '@react-navigation/native';
 import PlusIcon from '../assets/icons/Plus.svg';
+import Storage from '../utils/Storage';
 
-const HomeScreen = ({ route }) => {
+const HomeScreen = () => {
   const navigation = useNavigation();
-  const user = route.params?.user;
-  console.log('route---->', route);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const userData = await Storage.getData('user');
+      console.log('userData---->', userData);
+
+      setUser(userData);
+    };
+
+    fetchUser();
+  }, []);
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -31,7 +42,9 @@ const HomeScreen = ({ route }) => {
           <View style={styles.header}>
             <View>
               <Text style={styles.greeting}>Good afternoon,</Text>
-              <Text style={styles.userName}>{user ? user.name : 'Guest'}</Text>
+              <Text style={styles.userName}>
+                {user?.identities?.[0]?.identity_data?.full_name || 'Guest'}
+              </Text>
             </View>
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
