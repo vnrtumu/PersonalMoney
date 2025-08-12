@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,21 +12,68 @@ import {
   FlatList,
 } from 'react-native';
 import COLORS from '../constants/colors';
+import supabase from '../utils/supabase';
+import Storage from '../utils/Storage';
 
 const IncomeCategoryScreen = ({ navigation }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [categoryName, setCategoryName] = useState('');
   const [categories, setCategories] = useState([]);
+  const [user, setUser] = useState(null);
 
-  const handleDeleteCategory = (id) => {
-    setCategories(categories.filter((category) => category.id !== id));
+  useEffect(() => {
+    const initialize = async () => {
+      const userData = await Storage.getData('user');
+      setUser(userData);
+
+      if (userData) {
+        const { data, error } = await supabase
+          .from('income_category')
+          .select('*')
+          .eq('userId', userData.id);
+
+        if (error) {
+          console.error('Error fetching income categories:', error);
+        } else {
+          setCategories(data);
+        }
+      }
+    };
+
+    initialize();
+  }, []);
+
+  const handleDeleteCategory = async id => {
+    const previousCategories = categories;
+    setCategories(categories.filter(category => category.id !== id));
+
+    const { error } = await supabase
+      .from('income_category')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting income category:', error);
+      Alert.alert('Error', 'Failed to delete category.');
+      setCategories(previousCategories);
+    }
   };
 
-  const handleAddCategory = () => {
-    if (categoryName.trim()) {
-      setCategories([...categories, { id: Date.now().toString(), name: categoryName }]);
-      setCategoryName('');
-      setModalVisible(false);
+  const handleAddCategory = async () => {
+    if (categoryName.trim() && user) {
+      const { data, error } = await supabase
+        .from('income_category')
+        .insert([{ in_cat_name: categoryName, userId: user.id }])
+        .select();
+
+      if (error) {
+        console.error('Error adding income category:', error);
+        Alert.alert('Error', 'Failed to add category.');
+      } else if (data) {
+        setCategories([...categories, data[0]]);
+        setCategoryName('');
+        setModalVisible(false);
+      }
     }
   };
 
@@ -65,7 +112,11 @@ const IncomeCategoryScreen = ({ navigation }) => {
               onChangeText={setCategoryName}
             />
             <View style={styles.modalButtons}>
-              <Button title="Cancel" onPress={() => setModalVisible(false)} color={COLORS.red} />
+              <Button
+                title="Cancel"
+                onPress={() => setModalVisible(false)}
+                color={COLORS.red}
+              />
               <Button title="Add" onPress={handleAddCategory} />
             </View>
           </View>
@@ -74,10 +125,10 @@ const IncomeCategoryScreen = ({ navigation }) => {
 
       <FlatList
         data={categories}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.categoryItem}>
-            <Text style={styles.categoryText}>{item.name}</Text>
+            <Text style={styles.categoryText}>{item.in_cat_name}</Text>
             <TouchableOpacity onPress={() => handleDeleteCategory(item.id)}>
               <Text style={styles.deleteButtonText}>Delete</Text>
             </TouchableOpacity>
